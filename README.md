@@ -205,6 +205,29 @@ Drag & Drop Analytics can validate the destination contract and report delivery
 failures. It cannot manage the customer's server, DNS, backups, retention or network
 policy.
 
+## Upgrade ClickHouse
+
+The kit pins a ClickHouse LTS release (`YY.3` or `YY.8`) in `compose.yaml`.
+Upgrades between consecutive LTS releases, for example 26.3 to 26.8, happen in
+place: the server converts its metadata on first start, and the data volume is
+kept.
+
+1. Take and verify a backup of the `clickhouse_data` volume.
+2. Update the repository to the reviewed tag or commit with the new image.
+3. Pull and restart ClickHouse:
+
+   ```bash
+   docker compose pull clickhouse
+   docker compose up -d clickhouse
+   docker compose logs --tail=100 clickhouse
+   ```
+
+4. Use **Test connection** in Drag & Drop Analytics to confirm that the writer
+   and Explorer users still work.
+
+A downgrade after the new version has started is not supported. Restore the
+backup instead.
+
 ## Validation
 
 Validate scripts and the resolved Compose configuration without starting services:
