@@ -25,7 +25,7 @@ The Platform accepts public HTTPS endpoints in production. Do not expose the Cli
 Clone the repository and create the local environment file:
 
 ```bash
-git clone https://github.com/floriangoetting/dda-platform-clickhouse.git
+git clone https://github.com/dragdropanalytics/dda-platform-clickhouse.git
 cd dda-platform-clickhouse
 cp .env.example .env
 ```
