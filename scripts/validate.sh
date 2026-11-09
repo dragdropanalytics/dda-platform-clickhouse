@@ -85,4 +85,15 @@ for removed_column in dda_batch_id organization_id project_id environment_id eve
   fi
 done
 
+for map_column in map_version is_deleted device_ref run_firsts run_lasts accounts; do
+  if ! grep -Eq "^[[:space:]]+$map_column[[:space:]]" initdb/provision-environment.sh; then
+    echo "identity map column missing from provisioner: $map_column" >&2
+    exit 1
+  fi
+done
+if ! grep -Fq 'ENGINE = ReplacingMergeTree(map_version, is_deleted)' initdb/provision-environment.sh; then
+  echo "identity map engine missing from provisioner" >&2
+  exit 1
+fi
+
 echo "Deployment kit configuration is valid."

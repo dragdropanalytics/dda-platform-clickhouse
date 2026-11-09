@@ -152,8 +152,8 @@ Never enter the bootstrap admin account in Drag & Drop Analytics.
 | User | Intended use | Grants |
 | --- | --- | --- |
 | value of `CLICKHOUSE_ADMIN_USER` | bootstrap and maintenance | administrative; never store in Drag & Drop Analytics |
-| value of `DDA_PLATFORM_WRITER_USER` | Platform delivery and connection test | `INSERT` and contract-validation reads on one Environment table only |
-| value of `DDA_EXPLORER_READER_USER` | Explorer queries | `SELECT` on one Environment table only |
+| value of `DDA_PLATFORM_WRITER_USER` | Platform delivery, identity map updates and connection test | `INSERT` and contract-validation reads on one Environment table and its identity map only |
+| value of `DDA_EXPLORER_READER_USER` | Explorer queries | `SELECT` on one Environment table and its identity map only |
 
 Writer and reader passwords must differ. Rotate credentials deliberately in ClickHouse
 and Drag & Drop Analytics; changing `.env` alone does not modify users in an existing
@@ -183,6 +183,25 @@ an optional external account ID. `profile_id` and `user_profile_id` are opaque
 DDA-generated references. The reader resolves anonymous history through delivered
 login evidence; an internal profile can exist without an external User ID.
 Sessions can be supplied or calculated from event times in the Reader settings.
+
+### Identity map
+
+Each Environment table has a companion table `<events table>_identity_map`. It holds
+one row per device or session reference with the accounts that logged in on it over
+time. Drag & Drop Analytics rebuilds it from the delivered login evidence a few
+minutes after new logins and completely once a day. Reports use it so that anonymous
+events of a device belong to the account that last logged in on it before them. The
+writer needs `INSERT, SELECT` and the reader `SELECT` on this table.
+
+To add the map to an existing v3 Environment, run the provisioning command for that
+Environment again. It only creates what is missing and adds the grants:
+
+```bash
+./scripts/provision-environment.sh .env
+```
+
+Then test the writer and reader connections again in Drag & Drop Analytics. Until
+both tests pass with the map, reports keep the previous identity resolution.
 
 The bootstrap is idempotent for a new volume, but it is not a schema migration system. Future contract changes will be published as repository releases with explicit upgrade notes. Pin production deployments to a reviewed tag or commit instead of following the default branch automatically.
 
