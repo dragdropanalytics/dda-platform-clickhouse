@@ -57,6 +57,23 @@ ORDER BY (
 SETTINGS non_replicated_deduplication_window = 1000;
 "
 
+# Identity map next to the events table: one row per device or session
+# reference with its login runs. Drag & Drop Analytics rebuilds it from the
+# delivered login evidence. Reports read it to follow the last login.
+clickhouse_query --multiquery --query "
+CREATE TABLE IF NOT EXISTS \`$DDA_CLICKHOUSE_DATABASE\`.\`${DDA_CLICKHOUSE_EVENTS_TABLE}_identity_map\`
+(
+  map_version UInt64,
+  is_deleted UInt8,
+  device_ref UUID,
+  run_firsts Array(DateTime64(3, 'UTC')),
+  run_lasts Array(DateTime64(3, 'UTC')),
+  accounts Array(UUID)
+)
+ENGINE = ReplacingMergeTree(map_version, is_deleted)
+ORDER BY device_ref;
+"
+
 clickhouse_query \
   --param_writer_password "$DDA_PLATFORM_WRITER_PASSWORD" \
   --query "CREATE USER IF NOT EXISTS \`$DDA_PLATFORM_WRITER_USER\` IDENTIFIED WITH sha256_password BY {writer_password:String}"
@@ -65,8 +82,10 @@ clickhouse_query \
   --query "CREATE USER IF NOT EXISTS \`$DDA_EXPLORER_READER_USER\` IDENTIFIED WITH sha256_password BY {reader_password:String}"
 
 clickhouse_query --query "GRANT INSERT, SELECT ON \`$DDA_CLICKHOUSE_DATABASE\`.\`$DDA_CLICKHOUSE_EVENTS_TABLE\` TO \`$DDA_PLATFORM_WRITER_USER\`"
+clickhouse_query --query "GRANT INSERT, SELECT ON \`$DDA_CLICKHOUSE_DATABASE\`.\`${DDA_CLICKHOUSE_EVENTS_TABLE}_identity_map\` TO \`$DDA_PLATFORM_WRITER_USER\`"
 clickhouse_query --query "GRANT SELECT ON system.tables TO \`$DDA_PLATFORM_WRITER_USER\`"
 clickhouse_query --query "GRANT SHOW TABLES ON \`$DDA_CLICKHOUSE_DATABASE\`.* TO \`$DDA_PLATFORM_WRITER_USER\`"
 clickhouse_query --query "GRANT SELECT ON \`$DDA_CLICKHOUSE_DATABASE\`.\`$DDA_CLICKHOUSE_EVENTS_TABLE\` TO \`$DDA_EXPLORER_READER_USER\`"
+clickhouse_query --query "GRANT SELECT ON \`$DDA_CLICKHOUSE_DATABASE\`.\`${DDA_CLICKHOUSE_EVENTS_TABLE}_identity_map\` TO \`$DDA_EXPLORER_READER_USER\`"
 
-echo "Provisioned exclusive dda_native_v3 table $DDA_CLICKHOUSE_DATABASE.$DDA_CLICKHOUSE_EVENTS_TABLE."
+echo "Provisioned exclusive dda_native_v3 table $DDA_CLICKHOUSE_DATABASE.$DDA_CLICKHOUSE_EVENTS_TABLE and its identity map."

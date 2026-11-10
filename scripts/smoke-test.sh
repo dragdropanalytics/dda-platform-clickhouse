@@ -81,4 +81,17 @@ if [ "$row_count" != "1" ]; then
   exit 1
 fi
 
+compose exec -T clickhouse clickhouse-client \
+  --user "$DDA_PLATFORM_WRITER_USER" \
+  --password "$DDA_PLATFORM_WRITER_PASSWORD" \
+  --query "INSERT INTO \`$DDA_CLICKHOUSE_DATABASE\`.\`${DDA_CLICKHOUSE_EVENTS_TABLE}_identity_map\`
+    (map_version, is_deleted, device_ref, run_firsts, run_lasts, accounts)
+    SELECT map_version, is_deleted, device_ref, run_firsts, run_lasts, accounts
+    FROM \`$DDA_CLICKHOUSE_DATABASE\`.\`${DDA_CLICKHOUSE_EVENTS_TABLE}_identity_map\` WHERE 0"
+
+compose exec -T clickhouse clickhouse-client \
+  --user "$DDA_EXPLORER_READER_USER" \
+  --password "$DDA_EXPLORER_READER_PASSWORD" \
+  --query "SELECT count() FROM \`$DDA_CLICKHOUSE_DATABASE\`.\`${DDA_CLICKHOUSE_EVENTS_TABLE}_identity_map\`" >/dev/null
+
 echo "Writer and reader smoke test passed."
